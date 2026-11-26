@@ -9,27 +9,29 @@ permissions:
 
 jobs:
   build:
-    runs-on: ubuntu-latest
+    name: Export Android APK
+    runs-on: ubuntu-24.04
 
     steps:
       - name: Checkout
-        uses: actions/checkout@v4
+        uses: actions/checkout@v7
 
       - name: Setup Java
-        uses: actions/setup-java@v4
+        uses: actions/setup-java@v6
         with:
           distribution: temurin
           java-version: '17'
 
       - name: Setup Android SDK
-        uses: android-actions/setup-android@v3
+        uses: android-actions/setup-android@v4
+        with:
+          packages: 'platform-tools'
 
       - name: Install Android packages
         run: |
-          sdkmanager "platform-tools" \
+          sdkmanager --sdk_root="$ANDROID_HOME" \
             "build-tools;34.0.0" \
             "platforms;android-34" \
-            "cmdline-tools;latest" \
             "cmake;3.10.2.4988404" \
             "ndk;23.2.8568313"
 
@@ -43,6 +45,7 @@ jobs:
       - name: Configure Android export
         run: |
           mkdir -p ~/.config/godot
+
           cat > ~/.config/godot/editor_settings-4.tres <<EOF
           [gd_resource type="EditorSettings" format=3]
           [resource]
@@ -50,6 +53,27 @@ jobs:
           export/android/java_sdk_path = "$JAVA_HOME"
           EOF
 
+      - name: Create debug keystore
+        run: |
+          mkdir -p "$HOME/.android"
+
+          keytool -genkeypair -v \
+            -keystore "$HOME/.android/debug.keystore" \
+            -storepass android \
+            -alias androiddebugkey \
+            -keypass android \
+            -keyalg RSA \
+            -keysize 2048 \
+            -validity 10000 \
+            -dname "CN=Android Debug,O=Android,C=US" \
+            -noprompt
+
+          echo "GODOT_ANDROID_KEYSTORE_DEBUG_PATH=$HOME/.android/debug.keystore" >> "$GITHUB_ENV"
+          echo "GODOT_ANDROID_KEYSTORE_DEBUG_USER=androiddebugkey" >> "$GITHUB_ENV"
+          echo "GODOT_ANDROID_KEYSTORE_DEBUG_PASSWORD=android" >> "$GITHUB_ENV"
+
+      - name: Create Android export preset
+        run: |
           cat > export_presets.cfg <<'EOF'
           [preset.0]
           name="Android"
@@ -70,6 +94,9 @@ jobs:
           custom_template/debug=""
           custom_template/release=""
           gradle_build/use_gradle_build=false
+          gradle_build/export_format=0
+          gradle_build/min_sdk="23"
+          gradle_build/target_sdk="34"
           architectures/armeabi-v7a=false
           architectures/arm64-v8a=true
           architectures/x86=false
@@ -85,19 +112,24 @@ jobs:
           EOF
 
       - name: Import project
-        run: godot --headless --editor --path . --quit
+        run: |
+          godot --headless --editor --path . --quit
 
       - name: Export APK
         run: |
           mkdir -p build
+
           godot --headless --path . \
             --export-debug "Android" \
             build/SilentBlade-v0.5-debug.apk
 
+          test -s build/SilentBlade-v0.5-debug.apk
+
       - name: Upload APK
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: SilentBlade-v0.5-Android
           path: build/SilentBlade-v0.5-debug.apk
           if-no-files-found: error
+          retention-days: 14
           
