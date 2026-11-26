@@ -1,40 +1,50 @@
-# SILENT BLADE — development build v0.3
+# SILENT BLADE — development build v0.5
 
-Godot 4.x 2D side-scrolling stealth-action project, Android landscape target.
-
-## v0.3 fixes
-- Set `window/handheld/orientation=0` for landscape.
-- Grapple rope constraint is now evaluated on every player physics tick while attached.
-- Replaced separate left/right touch buttons with a virtual analog joystick that emits a continuous horizontal axis and supports multitouch alongside action buttons.
-- Re-anchored houses and lanterns to platform-top world coordinates; houses are drawn upward from their base.
-- Replaced the goal text mutation with a mission-results overlay showing success/failure, rank, elapsed time, detections and defeated enemies; replay reloads the mission.
-- Kept the project on Godot 4 scene format and typed GDScript patterns.
+Godot 4.3 2D side-scrolling stealth-action project, Android landscape target. This release extends the existing v0.4.1 project in place.
 
 ## Controls
-- Desktop development: A/D or arrows move; Space/W/Up jump; S/Down crouch.
-- Shift dash; E grapple; J/Z katana; Esc pause.
-- Android: left analog virtual joystick; right-side action buttons. The joystick and buttons are separate Controls, so simultaneous touch is supported.
+
+- Desktop: A/D or arrows move; Space/W/Up jump (tap for a short jump, hold for higher); second press in air performs the double jump; S/Down crouch.
+- Shift dash; E grapple (tap to attach, tap again to release); J/Z katana; hold K/X to block/parry; Esc pause.
+- Android: left analog virtual joystick; right-side action buttons. The independent jump button supports hold/release height control and repeat taps for double jump. Joystick and action buttons retain separate touch ownership for multitouch.
+
+## v0.5 advanced movement
+
+- Two-stage jump: ground/coyote jump plus one airborne jump, with landing reset and separate second-jump visual response.
+- Coyote time: 0.12 s. Jump buffer: 0.15 s. Short jump on release; holding jump lowers gravity for the early rise.
+- Physical grapple swing: tangent acceleration, preserved momentum, no attach snap, collision-aware rope constraint using `move_and_collide()`, and a physics ray query that blocks attachment through world geometry. A blocked line detaches without deleting velocity.
+- Dash with a smooth acceleration ramp, 0.20 s duration, 0.82 s cooldown and 0.22 s momentum exit window. Dash detaches grapple while retaining current motion and is unavailable during guard break.
+- Android canceled touches and application/window focus loss share a full input release path.
+
+See [docs/V0.5_ADVANCED_MOVEMENT.md](docs/V0.5_ADVANCED_MOVEMENT.md) for implementation details and movement parameters.
+
+## Preserved v0.4.1 systems
+
+- Three-hit combo profiles and shared physics attack hitbox.
+- Guard, Scout and Heavy Guard enemy profiles, knockback, damage and one-shot death handling.
+- Hold-to-block, 0.18-second parry window, guard stamina, guard break and counterattack bonus.
+- Enemy telegraph → execution → recovery phases.
+- Camera, HUD, virtual joystick, title screen, pause panel, mission results and replay.
+- Godot 4 scene format, GL Compatibility renderer and Android landscape orientation.
 
 ## Run and validate
-Open this folder in Godot 4.3+ and run the project (F6/F5), or execute:
+
+Open this folder in Godot 4.3 and run the project (F6/F5), or execute:
 
 ```bash
 godot --headless --path . --editor --quit
+godot --headless --path . --quit-after 120
 godot --path .
 ```
 
-The current execution environment did not contain Godot, Godot 4, ADB or Gradle. Therefore the v0.3 scripts were edited and statically inspected, but no Godot import/parse, runtime gameplay test, Android export, APK install or physical-device multitouch test is claimed.
+Run the static contract suite with:
 
-## Scope
-This remains a development build. It is not the final campaign or an Android APK. The art remains procedural placeholder art; full sprite animation, campaign levels, bosses, progression and persistent saves are not yet complete.
+```bash
+python -m pytest -q
+```
 
-## Asset provenance
-No third-party artwork, music, fonts or commercial game assets are included. Current visuals are procedurally drawn in GDScript.
+The current environment has no Godot executable, export templates, ADB, Android device or Git remote. The latest local static suite reports 32 passed. No Godot import/parser, headless runtime, in-game physics, Android multitouch or APK export is claimed. `.github/workflows/godot-validation.yml` contains both the Python contract job and Godot 4.3 import/headless-smoke job; push the project to a GitHub repository to trigger it.
 
+## Scope and assets
 
-## v0.3.1 technical stabilization
-- Strongly typed the enemy target as `SilentBladePlayer`.
-- Added input release on application/window focus loss.
-- Added a virtual joystick cancellation method.
-- Added GitHub Actions validation for Godot 4.3 import/parser and main-scene smoke launch.
-- See `docs/V0.3.1_STABILIZATION.md` for exact scope and verification limits.
+This remains a development source build, not the final campaign and not an APK. Several visuals are procedural placeholders. No third-party artwork, music, fonts or commercial game assets are included.

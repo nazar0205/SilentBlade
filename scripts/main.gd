@@ -1,14 +1,16 @@
 extends Node2D
 
 const PlayerScript = preload("res://scripts/player.gd")
-const GuardScript = preload("res://scripts/enemy.gd")
+const EnemyScript = preload("res://scripts/enemy.gd")
 const JoystickScript = preload("res://scripts/virtual_joystick.gd")
 
 var player: SilentBladePlayer
-var guard: SilentBladeGuard
+var enemies: Array[SilentBladeEnemy] = []
 var camera: Camera2D
 var hud: CanvasLayer
 var health_bar: ProgressBar
+var guard_bar: ProgressBar
+var guard_label: Label
 var alert_label: Label
 var status_label: Label
 var pause_panel: PanelContainer
@@ -21,7 +23,6 @@ var start_screen := true
 var elapsed_time := 0.0
 var detections := 0
 var defeated_enemies := 0
-var guard_was_alive := true
 var anchors: Array[Vector2] = [Vector2(520, 170), Vector2(920, 145), Vector2(1370, 180), Vector2(1770, 130)]
 
 func _notification(what: int) -> void:
@@ -29,18 +30,22 @@ func _notification(what: int) -> void:
 		_reset_all_input()
 
 func _reset_all_input() -> void:
-	for action in ["move_left", "move_right", "jump", "crouch", "dash", "grapple", "attack"]:
+	for action in ["move_left", "move_right", "jump", "crouch", "dash", "grapple", "attack", "block"]:
 		Input.action_release(action)
 	if joystick and is_instance_valid(joystick):
 		joystick.cancel_input()
 	if player and is_instance_valid(player):
 		player.release_controls()
 
+func _input(event: InputEvent) -> void:
+	if event is InputEventScreenTouch and event.canceled:
+		_reset_all_input()
+
 func _ready() -> void:
 	_setup_input()
 	_build_world()
 	_build_player()
-	_build_guard()
+	_build_enemies()
 	_build_camera()
 	_build_hud()
 	_show_title()
@@ -54,6 +59,7 @@ func _setup_input() -> void:
 		"dash": [KEY_SHIFT],
 		"grapple": [KEY_E],
 		"attack": [KEY_J, KEY_Z],
+		"block": [KEY_K, KEY_X],
 		"pause": [KEY_ESCAPE]
 	}
 	for action in actions:
@@ -144,16 +150,30 @@ func _build_player() -> void:
 	player.anchors = anchors
 	player.health_changed.connect(_on_health_changed)
 	player.died.connect(_on_player_died)
+	player.guard_changed.connect(_on_guard_changed)
+	player.guard_broken.connect(_on_guard_broken)
+	player.parry_succeeded.connect(_on_parry_succeeded)
 	add_child(player)
 
-func _build_guard() -> void:
-	guard = GuardScript.new()
-	guard.position = Vector2(900, 590)
-	guard.left_limit = 720.0
-	guard.right_limit = 1120.0
-	guard.target = player
-	guard.player_spotted.connect(_on_player_spotted)
-	add_child(guard)
+func _build_enemies() -> void:
+	# Three real enemy instances with different movement, combat and resistance profiles.
+	_spawn_enemy("Guard", Vector2(850, 620), 720.0, 1080.0)
+	_spawn_enemy("Scout", Vector2(1320, 620), 1160.0, 1430.0)
+	_spawn_enemy("Heavy Guard", Vector2(2150, 620), 1940.0, 2420.0)
+
+func _spawn_enemy(enemy_type: String, spawn_position: Vector2, patrol_left: float, patrol_right: float) -> SilentBladeEnemy:
+	var enemy: SilentBladeEnemy = EnemyScript.new()
+	enemy.enemy_type = enemy_type
+	enemy.position = spawn_position
+	enemy.left_limit = patrol_left
+	enemy.right_limit = patrol_right
+	enemy.direction = -1
+	enemy.target = player
+	enemy.player_spotted.connect(_on_player_spotted)
+	enemy.died.connect(_on_enemy_died)
+	add_child(enemy)
+	enemies.append(enemy)
+	return enemy
 
 func _build_camera() -> void:
 	camera = Camera2D.new()
@@ -188,6 +208,32 @@ func _build_hud() -> void:
 	health_bar.value = 100.0
 	top.add_child(health_bar)
 
+	guard_bar = ProgressBar.new()
+	guard_bar.position = Vector2(24, 54)
+	guard_bar.custom_minimum_size = Vector2(220, 16)
+	guard_bar.size = Vector2(220, 16)
+	guard_bar.max_value = 100.0
+	guard_bar.value = 100.0
+	guard_bar.show_percentage = false
+	var guard_fill := StyleBoxFlat.new()
+	guard_fill.bg_color = Color("62b7c8")
+	guard_fill.set_corner_radius_all(4)
+	guard_bar.add_theme_stylebox_override("fill", guard_fill)
+	var guard_background := StyleBoxFlat.new()
+	guard_background.bg_color = Color(0.06, 0.08, 0.14, 0.9)
+	guard_background.border_color = Color("8195aa")
+	guard_background.set_border_width_all(1)
+	guard_background.set_corner_radius_all(4)
+	guard_bar.add_theme_stylebox_override("background", guard_background)
+	hud.add_child(guard_bar)
+
+	guard_label = Label.new()
+	guard_label.position = Vector2(252, 51)
+	guard_label.text = "СТОЙКА"
+	guard_label.add_theme_font_size_override("font_size", 14)
+	guard_label.add_theme_color_override("font_color", Color("a9dce4"))
+	hud.add_child(guard_label)
+
 	alert_label = Label.new()
 	alert_label.position = Vector2(540, 25)
 	alert_label.add_theme_font_size_override("font_size", 22)
@@ -195,7 +241,7 @@ func _build_hud() -> void:
 	hud.add_child(alert_label)
 
 	status_label = Label.new()
-	status_label.position = Vector2(25, 58)
+	status_label.position = Vector2(25, 82)
 	status_label.text = "МИССИЯ 01  •  ЗАХВАЧЕННАЯ ДЕРЕВНЯ"
 	status_label.add_theme_font_size_override("font_size", 14)
 	status_label.add_theme_color_override("font_color", Color("c5c9dc"))
@@ -214,6 +260,7 @@ func _build_touch_controls() -> void:
 
 	var right_buttons := [
 		["ПРЫЖОК", "jump", Vector2(1090, 520), Vector2(100, 78)],
+		["БЛОК", "block", Vector2(900, 510), Vector2(82, 76)],
 		["УДАР", "attack", Vector2(1190, 590), Vector2(82, 82)],
 		["РЫВОК", "dash", Vector2(1000, 610), Vector2(82, 72)],
 		["КРЮК", "grapple", Vector2(1090, 620), Vector2(82, 72)],
@@ -291,7 +338,8 @@ func _build_pause_panel() -> void:
 
 func _show_title() -> void:
 	player.set_physics_process(false)
-	guard.set_physics_process(false)
+	for enemy in enemies:
+		enemy.set_physics_process(false)
 	var title_layer := CanvasLayer.new()
 	title_layer.name = "TitleScreen"
 	title_layer.process_mode = Node.PROCESS_MODE_ALWAYS
@@ -328,7 +376,8 @@ func _show_title() -> void:
 		title_layer.queue_free()
 		start_screen = false
 		player.set_physics_process(true)
-		guard.set_physics_process(true)
+		for enemy in enemies:
+			enemy.set_physics_process(true)
 	)
 	shade.add_child(start)
 
@@ -346,10 +395,37 @@ func _restart_level() -> void:
 func _on_health_changed(value: float) -> void:
 	health_bar.value = value
 
+func _on_guard_changed(value: float, maximum: float) -> void:
+	guard_bar.max_value = maximum
+	guard_bar.value = value
+	if player and player.guard_is_broken:
+		return
+	guard_label.text = "СТОЙКА  %d%%" % int(round(value / maximum * 100.0))
+	var fill := guard_bar.get_theme_stylebox("fill").duplicate() as StyleBoxFlat
+	fill.bg_color = Color("e2a64f") if value <= maximum * 0.3 else Color("62b7c8")
+	guard_bar.add_theme_stylebox_override("fill", fill)
+	guard_label.add_theme_color_override("font_color", Color("ffc36a") if value <= maximum * 0.3 else Color("a9dce4"))
+
+func _on_guard_broken() -> void:
+	guard_label.text = "СТОЙКА СЛОМАНА"
+	guard_label.add_theme_color_override("font_color", Color("ff6575"))
+	var fill := guard_bar.get_theme_stylebox("fill").duplicate() as StyleBoxFlat
+	fill.bg_color = Color("d7475c")
+	guard_bar.add_theme_stylebox_override("fill", fill)
+
+func _on_parry_succeeded() -> void:
+	status_label.text = "ПАРИРОВАНИЕ  •  КОНТРАТАКУЙ"
+	status_label.add_theme_color_override("font_color", Color("ffd36a"))
+
 func _on_player_spotted() -> void:
 	if alert_label.text != "ОБНАРУЖЕН":
 		detections += 1
 	alert_label.text = "ОБНАРУЖЕН"
+
+func _on_enemy_died(enemy_type: String) -> void:
+	defeated_enemies += 1
+	status_label.text = "%s ПОБЕЖДЁН" % enemy_type.to_upper()
+	status_label.add_theme_color_override("font_color", Color("ffd36a"))
 
 func _on_player_died() -> void:
 	if game_over or mission_completed:
@@ -361,16 +437,6 @@ func _process(delta: float) -> void:
 	if start_screen or paused or mission_completed or game_over:
 		return
 	elapsed_time += delta
-
-	if player and guard and is_instance_valid(guard):
-		if player.attacking and absf(player.global_position.x - guard.global_position.x) < 95.0 and absf(player.global_position.y - guard.global_position.y) < 80.0:
-			guard.hit(30.0)
-			player.attack_timer = 0.0
-		if absf(player.global_position.x - guard.global_position.x) < 36.0 and absf(player.global_position.y - guard.global_position.y) < 75.0 and guard.state == "ALERT":
-			player.take_damage(18.0 * delta)
-	elif guard_was_alive:
-		guard_was_alive = false
-		defeated_enemies += 1
 
 	if player and player.global_position.x >= 2550.0:
 		_complete_mission()
