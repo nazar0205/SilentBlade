@@ -1,5 +1,4 @@
-
-name: Unpack SilentBlade source
+name: Unpack SilentBlade v0.5
 
 on:
   workflow_dispatch:
@@ -10,35 +9,28 @@ permissions:
 jobs:
   unpack:
     runs-on: ubuntu-latest
-
     steps:
-      - name: Checkout repository
+      - name: Checkout
         uses: actions/checkout@v4
 
-      - name: Extract project
+      - name: Extract v0.5
         run: |
           set -euo pipefail
-
           mkdir -p /tmp/silentblade
+          unzip -q SilentBlade_v0.5_source.zip -d /tmp/silentblade
+          test -f /tmp/silentblade/project.godot
+          rsync -a --exclude='.github/' /tmp/silentblade/ ./
 
-          unzip -q SilentBlade_v0.3.1_source.zip -d /tmp/silentblade
-
-          test -f /tmp/silentblade/SilentBlade/project.godot
-
-          rsync -a /tmp/silentblade/SilentBlade/ ./
-
-      - name: Commit project files
+      - name: Commit
         run: |
           set -euo pipefail
-
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-
-          rm -f .github/workflows/godot-validation.yml
-
           git add -A
-
-          git commit -m "Extract SilentBlade v0.3.1 project"
-
+          if git diff --cached --quiet; then
+            echo "No changes"
+            exit 0
+          fi
+          git commit -m "Update SilentBlade to v0.5"
           git push
           
