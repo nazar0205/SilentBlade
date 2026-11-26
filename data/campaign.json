@@ -1,0 +1,233 @@
+{
+  "title": "SILENT BLADE: The Last Shadow",
+  "target_platform": "Android",
+  "engine": "Godot 4.x",
+  "campaign_length_hours_target": [
+    6,
+    10
+  ],
+  "regions": [
+    {
+      "id": "forgotten_village",
+      "name": "Forgotten Village",
+      "missions": [
+        [
+          "01",
+          "Ashes at Dawn",
+          "Tutorial: movement, jump, crouch and first patrol"
+        ],
+        [
+          "02",
+          "Lantern Watch",
+          "Avoid overlapping guard sightlines; introduce distractions"
+        ],
+        [
+          "03",
+          "The Bell Tower",
+          "Vertical traversal and first grapple route"
+        ],
+        [
+          "04",
+          "Beneath the Red Eaves",
+          "Optional interior route and first secret cache"
+        ]
+      ]
+    },
+    {
+      "id": "bamboo_forest",
+      "name": "Bamboo Forest",
+      "missions": [
+        [
+          "05",
+          "Whispering Path",
+          "Grass concealment, sound and moving patrols"
+        ],
+        [
+          "06",
+          "Broken Shrine",
+          "Explore branching paths and recover a clan record"
+        ],
+        [
+          "07",
+          "The Hunter's Mark",
+          "Elite scout search behavior and timed escape"
+        ],
+        [
+          "08",
+          "Waterfall Passage",
+          "Grapple traversal and a hidden chamber"
+        ]
+      ]
+    },
+    {
+      "id": "frozen_fortress",
+      "name": "Frozen Fortress",
+      "missions": [
+        [
+          "09",
+          "Whiteout",
+          "Wind and visibility challenge"
+        ],
+        [
+          "10",
+          "The Outer Wall",
+          "Vertical route choice: stealth infiltration or guarded ascent"
+        ],
+        [
+          "11",
+          "Silent Arsenal",
+          "Armored enemies and weapon counterplay"
+        ],
+        [
+          "12",
+          "The Frost Gate",
+          "Boss encounter and checkpoint gauntlet"
+        ]
+      ]
+    },
+    {
+      "id": "sunken_province",
+      "name": "Sunken Province",
+      "missions": [
+        [
+          "13",
+          "Drowned Streets",
+          "Water-side platforms and submerged shortcuts"
+        ],
+        [
+          "14",
+          "Paper Lanterns",
+          "Light/shadow stealth and moving searchlights"
+        ],
+        [
+          "15",
+          "The Archive Below",
+          "Puzzle-like exploration and lore collection"
+        ],
+        [
+          "16",
+          "Tide of Blades",
+          "Combat arena with multiple enemy roles"
+        ]
+      ]
+    },
+    {
+      "id": "crimson_castle",
+      "name": "Crimson Castle",
+      "missions": [
+        [
+          "17",
+          "Red Perimeter",
+          "Combine stealth, grapple and combat routes"
+        ],
+        [
+          "18",
+          "Hall of Masks",
+          "Elite guards and branching objective order"
+        ],
+        [
+          "19",
+          "The Seal Chamber",
+          "Final traversal trial and story reveal"
+        ],
+        [
+          "20",
+          "The Last Shadow",
+          "Final boss, ending and post-campaign replay unlock"
+        ]
+      ]
+    }
+  ],
+  "bosses": [
+    {
+      "id": "akira",
+      "name": "General Akira",
+      "region": "forgotten_village",
+      "encounter": "duelist with readable three-step attack patterns"
+    },
+    {
+      "id": "kage",
+      "name": "Kage, the Forest Stalker",
+      "region": "bamboo_forest",
+      "encounter": "ambush hunter who relocates between cover points"
+    },
+    {
+      "id": "shirogane",
+      "name": "Shirogane, Frost Warden",
+      "region": "frozen_fortress",
+      "encounter": "armored guardian with exposed recovery windows"
+    },
+    {
+      "id": "tidecaller",
+      "name": "The Tidecaller",
+      "region": "sunken_province",
+      "encounter": "arena control and environmental hazard phases"
+    },
+    {
+      "id": "twins",
+      "name": "The Masked Twins",
+      "region": "crimson_castle",
+      "encounter": "two coordinated opponents with alternating pressure"
+    },
+    {
+      "id": "kurogane",
+      "name": "Kurogane",
+      "region": "crimson_castle",
+      "encounter": "multi-phase final duel with a narrative conclusion"
+    }
+  ],
+  "weapons": [
+    {
+      "id": "katana",
+      "name": "Katana",
+      "role": "balanced melee; combo baseline"
+    },
+    {
+      "id": "dual_blades",
+      "name": "Dual Blades",
+      "role": "fast short-range strings"
+    },
+    {
+      "id": "heavy_blade",
+      "name": "Heavy Blade",
+      "role": "slow high-impact attacks"
+    },
+    {
+      "id": "shuriken",
+      "name": "Shuriken",
+      "role": "ranged interruption and switches"
+    },
+    {
+      "id": "kunai",
+      "name": "Kunai",
+      "role": "quick ranged tool with limited stock"
+    }
+  ],
+  "skill_trees": [
+    {
+      "id": "shadow",
+      "name": "SHADOW",
+      "focus": "stealth, concealment, noise and distraction"
+    },
+    {
+      "id": "blade",
+      "name": "BLADE",
+      "focus": "weapon mastery, combos, parry and aerial attacks"
+    },
+    {
+      "id": "wind",
+      "name": "WIND",
+      "focus": "mobility, dash, grapple and aerial control"
+    }
+  ],
+  "release_gate": [
+    "All 20 missions have unique playable layouts, objectives, enemy placement and secrets",
+    "All boss encounters have distinct mechanics and verified phase transitions",
+    "All five weapons have functional combat behavior, balancing and dedicated animation sets",
+    "Skill upgrades change actual gameplay values or unlock abilities",
+    "Save/load survives app restart and handles invalid or old save data",
+    "Touch controls support simultaneous inputs and are tested on target Android devices",
+    "APK is exported and launched on a real Android device",
+    "Campaign completion, ending and replay flow are verified"
+  ]
+}
