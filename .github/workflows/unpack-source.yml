@@ -25,7 +25,8 @@ jobs:
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git add -A
+
+          rm -f .github/workflows/godot-validation.ymlgit add -A
           git commit -m "Extract SilentBlade v0.3.1 project"
           git push
           
