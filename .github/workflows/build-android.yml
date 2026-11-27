@@ -1,5 +1,5 @@
 
-name: Build Silent Blade Android APK
+name: Build Silent Blade v0.8 Android APK
 
 on:
   workflow_dispatch:
@@ -14,28 +14,25 @@ jobs:
 
     steps:
       - name: Checkout
-        uses: actions/checkout@v7
+        uses: actions/checkout@v4
 
       - name: Setup Java
-        uses: actions/setup-java@v6
+        uses: actions/setup-java@v4
         with:
           distribution: temurin
           java-version: '17'
 
       - name: Setup Android SDK
-        uses: android-actions/setup-android@v4
-        with:
-          packages: 'platform-tools'
+        uses: android-actions/setup-android@v3
 
-      - name: Install Android packages
+      - name: Install Android SDK packages
         run: |
-          sdkmanager --sdk_root="$ANDROID_HOME" \
-            "build-tools;34.0.0" \
+          sdkmanager --install \
+            "platform-tools" \
             "platforms;android-34" \
-            "cmake;3.10.2.4988404" \
-            "ndk;23.2.8568313"
+            "build-tools;34.0.0"
 
-      - name: Setup Godot
+      - name: Setup Godot 4.3
         uses: chickensoft-games/setup-godot@v2
         with:
           version: 4.3.0
@@ -45,7 +42,6 @@ jobs:
       - name: Configure Android export
         run: |
           mkdir -p ~/.config/godot
-
           cat > ~/.config/godot/editor_settings-4.tres <<EOF
           [gd_resource type="EditorSettings" format=3]
           [resource]
@@ -56,7 +52,6 @@ jobs:
       - name: Create debug keystore
         run: |
           mkdir -p "$HOME/.android"
-
           keytool -genkeypair -v \
             -keystore "$HOME/.android/debug.keystore" \
             -storepass android \
@@ -72,62 +67,22 @@ jobs:
           echo "GODOT_ANDROID_KEYSTORE_DEBUG_USER=androiddebugkey" >> "$GITHUB_ENV"
           echo "GODOT_ANDROID_KEYSTORE_DEBUG_PASSWORD=android" >> "$GITHUB_ENV"
 
-      - name: Create Android export preset
-        run: |
-          cat > export_presets.cfg <<'EOF'
-          [preset.0]
-          name="Android"
-          platform="Android"
-          runnable=true
-          dedicated_server=false
-          custom_features=""
-          export_filter="all_resources"
-          include_filter=""
-          exclude_filter=""
-          export_path="build/SilentBlade-v0.5-debug.apk"
-          encryption_include_filters=""
-          encryption_exclude_filters=""
-          encrypt_pck=false
-          encrypt_directory=false
-
-          [preset.0.options]
-          custom_template/debug=""
-          custom_template/release=""
-          gradle_build/use_gradle_build=false
-          gradle_build/export_format=0
-          architectures/armeabi-v7a=false
-          architectures/arm64-v8a=true
-          architectures/x86=false
-          architectures/x86_64=false
-          package/unique_name="com.silentblade.game"
-          package/name="Silent Blade"
-          package/signed=true
-          version/code=5
-          version/name="0.5"
-          screen/immersive_mode=true
-          user_data_backup/allow=false
-          permissions/internet=false
-          EOF
-
       - name: Import project
-        run: |
-          godot --headless --editor --path . --quit
+        run: godot --headless --editor --path . --quit
 
-      - name: Export APK
+      - name: Export APK v0.8.0
         run: |
           mkdir -p build
-
           godot --headless --path . \
             --export-debug "Android" \
-            build/SilentBlade-v0.5-debug.apk
-
-          test -s build/SilentBlade-v0.5-debug.apk
+            build/SilentBlade-v0.8.0-debug.apk
+          test -s build/SilentBlade-v0.8.0-debug.apk
 
       - name: Upload APK
-        uses: actions/upload-artifact@v7
+        uses: actions/upload-artifact@v4
         with:
-          name: SilentBlade-v0.5-Android
-          path: build/SilentBlade-v0.5-debug.apk
+          name: SilentBlade-v0.8.0-Android
+          path: build/SilentBlade-v0.8.0-debug.apk
           if-no-files-found: error
           retention-days: 14
           
