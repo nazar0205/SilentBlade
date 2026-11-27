@@ -175,7 +175,7 @@ func _build_mission_systems() -> void:
 	mission_manager = MissionManagerScript.new()
 	mission_manager.name = "MissionManager"
 	add_child(mission_manager)
-	var mission_data := JSON.parse_string(FileAccess.get_file_as_string("res://data/missions/mission_01.json"))
+	var mission_data: Variant = JSON.parse_string(FileAccess.get_file_as_string("res://data/missions/mission_01.json"))
 	if mission_data is Dictionary:
 		mission_manager.start_mission(mission_data)
 		_tutorial_entries = mission_data.get("tutorial", [])
