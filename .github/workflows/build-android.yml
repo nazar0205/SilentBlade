@@ -16,21 +16,26 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
 
-      - name: Setup Java
+      - name: Setup Java 17
         uses: actions/setup-java@v4
         with:
           distribution: temurin
           java-version: '17'
 
       - name: Setup Android SDK
-        uses: android-actions/setup-android@v3
+        uses: android-actions/setup-android@v4
+        with:
+          packages: ''
 
-      - name: Install Android SDK packages
+      - name: Install Android SDK components
         run: |
-          sdkmanager --install \
+          sdkmanager --sdk_root="$ANDROID_HOME" \
             "platform-tools" \
             "platforms;android-34" \
-            "build-tools;34.0.0"
+            "build-tools;34.0.0" \
+            "cmdline-tools;latest" \
+            "cmake;3.10.2.4988404" \
+            "ndk;23.2.8568313"
 
       - name: Setup Godot 4.3
         uses: chickensoft-games/setup-godot@v2
@@ -39,9 +44,10 @@ jobs:
           use-dotnet: false
           include-templates: true
 
-      - name: Configure Android export
+      - name: Configure Godot Android paths
         run: |
           mkdir -p ~/.config/godot
+
           cat > ~/.config/godot/editor_settings-4.tres <<EOF
           [gd_resource type="EditorSettings" format=3]
           [resource]
@@ -52,6 +58,7 @@ jobs:
       - name: Create debug keystore
         run: |
           mkdir -p "$HOME/.android"
+
           keytool -genkeypair -v \
             -keystore "$HOME/.android/debug.keystore" \
             -storepass android \
@@ -68,14 +75,17 @@ jobs:
           echo "GODOT_ANDROID_KEYSTORE_DEBUG_PASSWORD=android" >> "$GITHUB_ENV"
 
       - name: Import project
-        run: godot --headless --editor --path . --quit
+        run: |
+          godot --headless --editor --path . --quit
 
-      - name: Export APK v0.8.0
+      - name: Export Android APK
         run: |
           mkdir -p build
+
           godot --headless --path . \
             --export-debug "Android" \
             build/SilentBlade-v0.8.0-debug.apk
+
           test -s build/SilentBlade-v0.8.0-debug.apk
 
       - name: Upload APK
