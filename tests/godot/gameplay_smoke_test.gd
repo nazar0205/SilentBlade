@@ -29,14 +29,14 @@ func _touch_event(index: int, pos: Vector2, pressed: bool, canceled: bool = fals
 	event.position = pos
 	event.pressed = pressed
 	event.canceled = canceled
-	Input.parse_input_event(event)
+	_touch.call("_input", event)
 
 func _drag_event(index: int, pos: Vector2, relative: Vector2) -> void:
 	var event := InputEventScreenDrag.new()
 	event.index = index
 	event.position = pos
 	event.relative = relative
-	Input.parse_input_event(event)
+	_touch.call("_input", event)
 
 func _find_button(node: Node, text: String) -> Button:
 	if node is Button and (node as Button).text == text:
