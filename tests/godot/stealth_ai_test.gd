@@ -149,6 +149,7 @@ func _run() -> void:
 	listener._begin_search(Vector2(130.0, 0.0))
 	_check(listener.state == "SEARCH", "lost visual pursuit transitions from CHASE to SEARCH")
 	listener.state = "CHASE"
+    listener.direction = -1
 	listener.is_player_visible = false
 	listener.lost_sight_timer = 0.0
 	listener.vision_accumulator = 0.0
