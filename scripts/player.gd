@@ -6,6 +6,8 @@ signal died
 signal guard_changed(value: float, maximum: float)
 signal guard_broken
 signal parry_succeeded
+signal noise_emitted(world_position: Vector2, radius: float, intensity: float, event_type: String, source_id: int)
+signal distraction_requested(origin: Vector2, direction: int)
 
 const SPEED := 300.0
 const ACCEL := 1800.0
@@ -69,6 +71,7 @@ const GUARD_DAMAGE_PER_HIT := 34.0
 const GUARD_BREAK_DAMAGE_RATIO := 0.67
 const GUARD_BREAK_TIME := 1.35
 const COUNTER_WINDOW := 1.1
+const DISTRACTION_COOLDOWN := 3.2
 
 var health := 100.0
 var facing := 1
@@ -115,6 +118,8 @@ var counter_window_timer := 0.0
 var parry_flash_timer := 0.0
 var block_flash_timer := 0.0
 var guard_is_broken := false
+var footstep_noise_timer := 0.0
+var distraction_cooldown := 0.0
 
 func _ready() -> void:
 	collision_layer = 1
@@ -149,6 +154,7 @@ func _create_attack_hitbox() -> void:
 	add_child(attack_hitbox)
 
 func _physics_process(delta: float) -> void:
+	var was_on_floor := is_on_floor()
 	invuln = maxf(0.0, invuln - delta)
 	attack_timer = maxf(0.0, attack_timer - delta)
 	attack_cooldown = maxf(0.0, attack_cooldown - delta)
@@ -165,6 +171,7 @@ func _physics_process(delta: float) -> void:
 		dash_exit_timer = maxf(0.0, dash_exit_timer - delta)
 	_update_defense(delta)
 	_update_jump_timers(delta)
+	distraction_cooldown = maxf(0.0, distraction_cooldown - delta)
 
 	if Input.is_action_just_pressed("block"):
 		begin_block()
@@ -172,6 +179,9 @@ func _physics_process(delta: float) -> void:
 		end_block()
 	if Input.is_action_just_pressed("attack"):
 		start_attack()
+	if Input.is_action_just_pressed("distract") and distraction_cooldown <= 0.0 and health > 0.0:
+		distraction_cooldown = DISTRACTION_COOLDOWN
+		distraction_requested.emit(global_position + Vector2(24.0 * facing, -42.0), facing)
 	if Input.is_action_just_pressed("crouch"):
 		crouching = true
 	if Input.is_action_just_released("crouch"):
@@ -191,6 +201,7 @@ func _physics_process(delta: float) -> void:
 		_toggle_grapple()
 
 	_try_consume_jump_buffer()
+	_update_footstep_noise(delta, axis)
 	if dash_timer > 0.0:
 		_update_dash(delta)
 	else:
@@ -211,7 +222,13 @@ func _physics_process(delta: float) -> void:
 			jump_hold_timer = 0.0
 		jump_hold_timer = maxf(0.0, jump_hold_timer - delta)
 
+	var impact_speed := velocity.y
 	move_and_slide()
+	if not was_on_floor and is_on_floor() and impact_speed > 180.0:
+		var landing_event := "FALL" if impact_speed >= 450.0 else "LAND"
+		var landing_radius := clampf(100.0 + impact_speed * 0.34, 150.0, 390.0)
+		var landing_intensity := clampf(impact_speed / 920.0, 0.25, 1.0)
+		noise_emitted.emit(global_position, landing_radius, landing_intensity, landing_event, get_instance_id())
 	if grappling:
 		_constrain_rope_after_motion()
 		if grappling and not _has_clear_grapple_line(grapple_point):
@@ -233,6 +250,10 @@ func _update_jump_timers(delta: float) -> void:
 		coyote_timer = COYOTE_TIME
 	else:
 		coyote_timer = maxf(0.0, coyote_timer - delta)
+		if coyote_timer <= 0.0 and jump_count == 0:
+			# Walked off a ledge and the coyote window is gone: the ground jump is spent,
+			# the air jump stays available (otherwise the player could not jump at all).
+			jump_count = 1
 
 func _try_consume_jump_buffer() -> bool:
 	if jump_buffer_timer <= 0.0 or block_held or dash_timer > 0.0 or guard_is_broken:
@@ -243,6 +264,7 @@ func _try_consume_jump_buffer() -> bool:
 		coyote_timer = 0.0
 		jump_buffer_timer = 0.0
 		jump_hold_timer = JUMP_HOLD_DURATION
+		noise_emitted.emit(global_position, 205.0, 0.48, "JUMP", get_instance_id())
 		if grappling:
 			_detach_grapple()
 		return true
@@ -251,11 +273,31 @@ func _try_consume_jump_buffer() -> bool:
 		velocity.y = JUMP_VELOCITY * 0.94
 		jump_buffer_timer = 0.0
 		jump_hold_timer = JUMP_HOLD_DURATION
+		noise_emitted.emit(global_position, 230.0, 0.58, "JUMP", get_instance_id())
 		if grappling:
 			_detach_grapple()
 		_play_second_jump_effect()
 		return true
 	return false
+
+func notify_interaction_noise(event_type: String = "INTERACTION", radius: float = 190.0, intensity: float = 0.55) -> void:
+	# Interactable world objects can call this on the player without owning noise propagation.
+	noise_emitted.emit(global_position, maxf(0.0, radius), clampf(intensity, 0.0, 1.0), event_type, get_instance_id())
+
+func _update_footstep_noise(delta: float, axis: float) -> void:
+	if absf(axis) <= 0.25 or dash_timer > 0.0 or not is_on_floor():
+		footstep_noise_timer = minf(footstep_noise_timer, 0.12)
+		return
+	footstep_noise_timer -= delta
+	if footstep_noise_timer > 0.0:
+		return
+	if crouching:
+		noise_emitted.emit(global_position, 92.0, 0.16, "SNEAK_STEP", get_instance_id())
+		footstep_noise_timer = 0.72
+	else:
+		var run_factor := clampf(absf(velocity.x) / SPEED, 0.25, 1.0)
+		noise_emitted.emit(global_position, 170.0 + run_factor * 70.0, 0.32 + run_factor * 0.16, "FOOTSTEP", get_instance_id())
+		footstep_noise_timer = 0.42
 
 func _play_second_jump_effect() -> void:
 	second_jump_flash_timer = SECOND_JUMP_FLASH_TIME
@@ -269,6 +311,7 @@ func _start_dash(axis: float) -> void:
 	dash_timer = DASH_TIME
 	dash_cooldown = DASH_COOLDOWN
 	dash_exit_timer = 0.0
+	noise_emitted.emit(global_position, 340.0, 0.90, "DASH", get_instance_id())
 
 func _update_dash(delta: float) -> void:
 	dash_elapsed += delta
@@ -305,6 +348,7 @@ func start_attack() -> void:
 		counter_window_timer = 0.0
 	attacking = true
 	attack_active = true
+	noise_emitted.emit(global_position, 220.0 if current_attack_index < 2 else 280.0, 0.66 if current_attack_index < 2 else 0.82, "ATTACK", get_instance_id())
 	hit_ids_this_swing.clear()
 	attack_rect.size = current_attack_hitbox_size
 	attack_hitbox.position = Vector2(absf(current_attack_hitbox_offset.x) * facing, current_attack_hitbox_offset.y)
@@ -439,6 +483,7 @@ func _toggle_grapple() -> void:
 		# Start at the current distance. Never shorten the rope on attach or snap the player.
 		rope_length = maxf(GRAPPLE_MIN_ROPE_LENGTH, best)
 		grappling = true
+		noise_emitted.emit(global_position, 145.0, 0.30, "GRAPPLE", get_instance_id())
 
 func _has_clear_grapple_line(point: Vector2) -> bool:
 	var ray_origin := global_position + Vector2(0.0, -30.0)
@@ -477,6 +522,14 @@ func _constrain_rope_after_motion() -> void:
 func _detach_grapple() -> void:
 	# Intentionally leave velocity untouched so tangential momentum survives release.
 	grappling = false
+
+func kill() -> void:
+	# Used for falling out of the world; ignores invulnerability frames.
+	if health <= 0.0:
+		return
+	health = 0.0
+	health_changed.emit(health)
+	died.emit()
 
 func take_damage(amount: float) -> void:
 	if invuln > 0.0:

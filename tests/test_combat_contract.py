@@ -40,9 +40,12 @@ def test_block_is_hold_based_with_exact_parry_window_and_guard_break():
 
 def test_touch_block_releases_on_focus_loss_and_input_reset():
     assert '"block"' in MAIN
-    assert '["move_left", "move_right", "jump", "crouch", "dash", "grapple", "attack", "block"]' in MAIN
-    assert '"БЛОК", "block"' in MAIN
-    assert "button.button_up.connect" in MAIN
+    reset_block = re.search(r"func _reset_all_input\(\).*?(?=\nfunc )", MAIN, re.S).group(0)
+    for action in ("move_left", "move_right", "jump", "crouch", "dash", "grapple", "attack", "block", "interact"):
+        assert f'"{action}"' in reset_block
+    touch = (ROOT / "scripts/input/touch_controls.gd").read_text(encoding="utf-8")
+    assert '"action": "block"' in touch
+    assert 'touch_controls.call("release_all")' in MAIN
 
 
 def test_guard_hud_is_signal_driven_and_displays_broken_state():
@@ -127,8 +130,9 @@ def test_guard_scout_and_heavy_guard_have_distinct_runtime_profiles():
 
 def test_level_spawns_all_three_enemy_types_as_live_instances():
     assert "func _spawn_enemy(" in MAIN
-    for kind in ("Guard", "Scout", "Heavy Guard"):
-        assert f'"{kind}"' in MAIN
+    mission = __import__("json").loads((ROOT / "data/missions/mission_01.json").read_text(encoding="utf-8"))
+    assert {entry["type"] for entry in mission["enemy_spawns"]} == {"Guard", "Scout", "Heavy Guard"}
+    assert 'enemy.enemy_type = enemy_type' in MAIN
     assert "enemies.append(enemy)" in MAIN
     assert "enemy.died.connect(_on_enemy_died)" in MAIN
     assert "enemy.set_physics_process(false)" in MAIN

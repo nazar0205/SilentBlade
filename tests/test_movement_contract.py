@@ -4,7 +4,7 @@ import re
 ROOT = Path(__file__).resolve().parents[1]
 PLAYER = (ROOT / "scripts/player.gd").read_text(encoding="utf-8")
 MAIN = (ROOT / "scripts/main.gd").read_text(encoding="utf-8")
-JOYSTICK = (ROOT / "scripts/virtual_joystick.gd").read_text(encoding="utf-8")
+TOUCH = (ROOT / "scripts/input/touch_controls.gd").read_text(encoding="utf-8")
 
 
 def test_jump_system_has_two_charges_and_bounded_coyote_and_buffer_windows():
@@ -87,29 +87,60 @@ def test_dash_detaches_grapple_without_position_snap_and_keeps_exit_momentum():
     assert "DASH_EXIT_SPEED" in PLAYER
 
 
-def test_android_touch_cancel_releases_all_actions_and_resets_player_transients():
-    assert "event is InputEventScreenTouch and event.canceled" in MAIN
+def test_focus_loss_releases_every_input_through_the_touch_layer_and_player():
     assert "NOTIFICATION_APPLICATION_FOCUS_OUT" in MAIN
     assert "NOTIFICATION_WM_WINDOW_FOCUS_OUT" in MAIN
-    assert "_reset_all_input()" in MAIN
     reset_block = re.search(r"func _reset_all_input\(\).*?(?=\nfunc )", MAIN, re.S).group(0)
+    assert 'touch_controls.call("release_all")' in reset_block
     for action in ("jump", "grapple", "dash", "attack", "block", "move_left", "move_right"):
         assert f'"{action}"' in reset_block
-    assert "joystick.cancel_input()" in reset_block
     assert "player.release_controls()" in reset_block
 
 
-def test_touch_controls_keep_independent_buttons_for_multitouch_and_jump_hold():
-    assert '["ПРЫЖОК", "jump"' in MAIN
-    assert "button.button_down.connect" in MAIN
-    assert "button.button_up.connect" in MAIN
-    assert "joystick.axis_changed.connect(_on_joystick_axis)" in MAIN
+def test_main_no_longer_uses_mouse_only_buttons_or_the_old_joystick_for_gameplay_input():
+    assert "virtual_joystick" not in MAIN
+    assert "button_down.connect" not in MAIN
+    assert "button.button_up.connect" not in MAIN
+    assert "event is InputEventScreenTouch and event.canceled" not in MAIN
+    assert not (ROOT / "scripts/virtual_joystick.gd").exists()
 
 
-def test_virtual_joystick_releases_axis_when_touch_is_cancelled_or_focus_lost():
-    assert "func cancel_input()" in JOYSTICK
-    assert "_reset_axis()" in JOYSTICK
-    assert "axis_changed.emit(0.0)" in JOYSTICK
+def test_main_builds_touch_layer_and_gates_it_by_game_state():
+    assert 'preload("res://scripts/input/touch_controls.gd")' in MAIN
+    assert "TouchControlsScript.new()" in MAIN
+    assert 'connect("pause_pressed", _toggle_pause)' in MAIN
+    assert 'call("set_enabled", true)' in MAIN
+    assert 'call("set_enabled", false)' in MAIN
+
+
+def test_touch_layer_reads_raw_touch_events_with_one_owner_per_finger():
+    assert "func _input(event: InputEvent)" in TOUCH
+    assert "InputEventScreenTouch" in TOUCH and "InputEventScreenDrag" in TOUCH
+    assert "touch.index" in TOUCH and "drag.index" in TOUCH
+    assert "mouse_filter = Control.MOUSE_FILTER_IGNORE" in TOUCH
+    for action in ("attack", "jump", "dash", "grapple", "block", "crouch"):
+        assert f'"action": "{action}"' in TOUCH
+
+
+def test_releasing_one_finger_releases_only_its_own_action():
+    end_block = re.search(r"func _end_touch\(.*?(?=\nfunc )", TOUCH, re.S).group(0)
+    assert "_fingers.erase(finger)" in end_block
+    assert "_fingers.clear()" not in end_block
+    assert "release_all()" not in end_block
+
+
+def test_touch_layer_stick_is_independent_of_buttons():
+    assert "_stick_finger" in TOUCH
+    begin_block = re.search(r"func _begin_touch\(.*?(?=\nfunc )", TOUCH, re.S).group(0)
+    assert "_stick_finger == -1" in begin_block
+    move_block = re.search(r"func _move_touch\(.*?(?=\nfunc )", TOUCH, re.S).group(0)
+    assert "finger != _stick_finger" in move_block
+
+
+def test_touch_layer_releases_on_focus_loss_and_keeps_short_taps_for_a_physics_tick():
+    assert "NOTIFICATION_APPLICATION_FOCUS_OUT" in TOUCH
+    assert "func release_all()" in TOUCH
+    assert "_pending_release" in TOUCH and "Engine.get_physics_frames()" in TOUCH
 
 
 def test_existing_combat_hud_camera_and_mission_systems_remain_wired():

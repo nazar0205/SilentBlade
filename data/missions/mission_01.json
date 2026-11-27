@@ -1,0 +1,231 @@
+{
+  "id": "mission_01_shadow_of_the_village",
+  "title": "MISSION 01 — THE SHADOW OF THE VILLAGE",
+  "subtitle": "THE SHADOW OF THE VILLAGE",
+  "story": "Рэн должен проникнуть в деревню военачальника Куроганэ, отключить сигнальный механизм, забрать военные планы из архива и уйти до рассвета.",
+  "world_width": 6200,
+  "spawn": {
+    "x": 150,
+    "y": 580
+  },
+  "evacuation_x": 5750,
+  "objectives": [
+    {
+      "id": "enter_village",
+      "title": "Проникнуть в деревню",
+      "description": "Пересечь внешний периметр деревни."
+    },
+    {
+      "id": "disable_signal",
+      "title": "Отключить сигнализацию",
+      "description": "Найти сигнальный механизм в охраняемом дворе.",
+      "requires": [
+        "enter_village"
+      ]
+    },
+    {
+      "id": "retrieve_orders",
+      "title": "Забрать военные планы",
+      "description": "Проникнуть в архив и забрать документ Куроганэ.",
+      "requires": [
+        "enter_village"
+      ]
+    },
+    {
+      "id": "evacuate",
+      "title": "Добраться до эвакуации",
+      "description": "Покинуть деревню через точку эвакуации.",
+      "requires": [
+        "retrieve_orders",
+        "disable_signal"
+      ]
+    }
+  ],
+  "optional_objectives": [
+    {
+      "id": "ghost_run",
+      "title": "Призрак: пройти без обнаружения"
+    },
+    {
+      "id": "no_kills",
+      "title": "Без кровопролития: не нейтрализовать врагов"
+    },
+    {
+      "id": "all_secrets",
+      "title": "Собиратель: найти все секреты"
+    },
+    {
+      "id": "all_documents",
+      "title": "Архивариус: собрать оба документа"
+    }
+  ],
+  "secrets": [
+    {
+      "id": "hidden_cache",
+      "title": "Тайник на крыше",
+      "kind": "CACHE"
+    },
+    {
+      "id": "field_report",
+      "title": "Отчёт дозорного",
+      "kind": "DOCUMENT"
+    }
+  ],
+  "zones": [
+    {
+      "id": "A",
+      "name": "Внешний периметр",
+      "from": 0,
+      "to": 1000,
+      "route_types": [
+        "земля",
+        "бамбуковые заросли"
+      ]
+    },
+    {
+      "id": "B",
+      "name": "Жилой квартал",
+      "from": 1000,
+      "to": 2250,
+      "route_types": [
+        "улица",
+        "крыши",
+        "тайник"
+      ]
+    },
+    {
+      "id": "C",
+      "name": "Охраняемый двор",
+      "from": 2250,
+      "to": 3650,
+      "route_types": [
+        "улица с патрулями",
+        "охранная башня",
+        "скрытый проход"
+      ]
+    },
+    {
+      "id": "D",
+      "name": "Архив",
+      "from": 3650,
+      "to": 4650,
+      "route_types": [
+        "главный вход",
+        "крыша архива"
+      ]
+    },
+    {
+      "id": "E",
+      "name": "Эвакуация",
+      "from": 4650,
+      "to": 6200,
+      "route_types": [
+        "нижний путь",
+        "крыши",
+        "точка эвакуации"
+      ]
+    }
+  ],
+  "enemy_spawns": [
+    {
+      "id": "outer_guard",
+      "type": "Guard",
+      "x": 720,
+      "left": 560,
+      "right": 880
+    },
+    {
+      "id": "street_scout",
+      "type": "Scout",
+      "x": 1320,
+      "left": 1120,
+      "right": 1510
+    },
+    {
+      "id": "residential_guard",
+      "type": "Guard",
+      "x": 1920,
+      "left": 1710,
+      "right": 2110
+    },
+    {
+      "id": "yard_scout",
+      "type": "Scout",
+      "x": 2490,
+      "left": 2320,
+      "right": 2710
+    },
+    {
+      "id": "yard_heavy",
+      "type": "Heavy Guard",
+      "x": 3070,
+      "left": 2820,
+      "right": 3370
+    },
+    {
+      "id": "archive_guard",
+      "type": "Guard",
+      "x": 3740,
+      "left": 3650,
+      "right": 3950
+    },
+    {
+      "id": "archive_scout",
+      "type": "Scout",
+      "x": 4380,
+      "left": 4190,
+      "right": 4530
+    },
+    {
+      "id": "evac_guard",
+      "type": "Guard",
+      "x": 5070,
+      "left": 4880,
+      "right": 5260
+    }
+  ],
+  "tutorial": [
+    {
+      "id": "move",
+      "x": 0,
+      "text": "ДВИЖЕНИЕ • Используй левый джойстик. Приседание снижает заметность."
+    },
+    {
+      "id": "grass",
+      "x": 520,
+      "text": "УКРЫТИЕ • В высокой траве двигайся пригнувшись, чтобы тише пройти мимо охраны."
+    },
+    {
+      "id": "roofs",
+      "x": 1120,
+      "text": "КРЮК • Используй крыши и крюк, чтобы обойти уличные патрули."
+    },
+    {
+      "id": "decoy",
+      "x": 2380,
+      "text": "ОТВЛЕЧЕНИЕ • Брось предмет в сторону, чтобы увести охранника от маршрута."
+    },
+    {
+      "id": "alarm",
+      "x": 2900,
+      "text": "СИГНАЛ • Найди панель во дворе. Пока механизм включён, обнаружение вызовет общую тревогу."
+    },
+    {
+      "id": "interact",
+      "x": 4050,
+      "text": "ВЗАИМОДЕЙСТВИЕ • Подойди к объекту и нажми появившуюся кнопку действия."
+    }
+  ],
+  "checkpoints": [
+    {
+      "id": "village_checkpoint",
+      "x": 2180,
+      "y": 585
+    },
+    {
+      "id": "archive_checkpoint",
+      "x": 3940,
+      "y": 585
+    }
+  ]
+}
