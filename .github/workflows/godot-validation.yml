@@ -1,5 +1,5 @@
 
-name: Godot validation
+name: Godot 4.3 Validation
 
 on:
   workflow_dispatch:
@@ -9,6 +9,7 @@ on:
       - 'scripts/**'
       - 'scenes/**'
       - 'data/**'
+      - 'tests/godot/**'
 
 permissions:
   contents: read
@@ -16,12 +17,11 @@ permissions:
 jobs:
   validate:
     runs-on: ubuntu-latest
-
     steps:
       - name: Checkout
         uses: actions/checkout@v4
 
-      - name: Setup Godot
+      - name: Setup Godot 4.3
         uses: chickensoft-games/setup-godot@v2
         with:
           version: 4.3.0
@@ -30,13 +30,15 @@ jobs:
       - name: Import project
         run: godot --headless --editor --path . --quit
 
-      - name: Check GDScript
-        run: |
-          for file in scripts/*.gd; do
-            echo "Checking $file"
-            godot --headless --path . --check-only --script "$file"
-          done
-
       - name: Load main scene
-        run: godot --headless --path . --quit-after 5
+        run: godot --headless --path . --quit-after 10
+
+      - name: Gameplay and multitouch tests
+        run: godot --headless --path . -s tests/godot/gameplay_smoke_test.gd
+
+      - name: Mission systems tests
+        run: godot --headless --path . -s tests/godot/mission_systems_test.gd
+
+      - name: Stealth and AI tests
+        run: godot --headless --path . -s tests/godot/stealth_ai_test.gd
         
